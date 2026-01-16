@@ -1,0 +1,27 @@
+# .github/workflows/monthly-release.yml
+name: Monthly Release
+on:
+  schedule:
+    - cron: "0 0 25 * *"  # 25th at 00:00 UTC
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Determine release branch
+        run: |
+          BRANCH=$(git branch -r | grep 'origin/release/' | tail -n1 | sed 's#origin/##')
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+        id: rel
+      - name: Create tag and release
+        if: steps.rel.outputs.branch != ''
+        run: |
+          VERSION="v$(date +%Y).$(date +%m).0"
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@example.com"
+          git tag -a "$VERSION" -m "Monthly release $VERSION" "${{ steps.rel.outputs.branch }}"
+          git push origin "$VERSION"
+          gh release create "$VERSION" --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
